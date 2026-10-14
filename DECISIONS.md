@@ -1,0 +1,7 @@
+# DECISIONS.md
+
+1. **Indexes.** On attendance: unique `(emp_code, date)` (one record per day, makes punch-in race-safe, serves the employee filter and monthly report); `(date desc, emp_code)` for the default listing order and month scans; `(status, date desc, emp_code)` for the status filter; `(emp_code, punch_in desc)` to find a punch-out's record. On employees: unique `emp_code`, `(department, emp_code)`, `joined_on` and `(department, joined_on)` for headcount. I rejected copying `department` into every log: faster reports, but a department change would mean rewriting history.
+2. **Punch-in race.** Both requests load the employee, work out the same date and call `insert_one`. The unique index lets exactly one succeed; the other gets `DuplicateKeyError`, returned as 409. There is no check-then-insert.
+3. **Ties.** `$rank` gives tied employees the same rank and skips the next. I filter `rank <= limit` after ranking, so everyone tied at the cutoff is returned, which can be more than `limit` rows.
+4. **Headcount.** The summary starts from `employees` (joined on or before month end) and looks up each person's logs. `$group` adds 1 per employee even when the lookup is empty, so zero-log people count.
+5. **At 100x.** Keep per-employee daily summary documents, updated on punch and correction, so analytics read small pre-aggregated rows instead of joining raw logs; use keyset pagination instead of `skip`.
