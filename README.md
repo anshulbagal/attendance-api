@@ -6,7 +6,7 @@ Designed with strict mathematical precision, full timezone awareness (IST / UTC)
 
 ---
 
-## 🚀 Quickstart
+##  Quickstart
 
 ### 1. Environment Setup
 ```bash
@@ -38,7 +38,7 @@ All database indexes are verified and created idempotently at application startu
 
 ---
 
-## 🏗️ Architecture & Core Design Highlights
+##  Architecture & Core Design Highlights
 
 ### 1. Timezone & Instant Precision
 - **Instants on the wire**: Strict integer epoch milliseconds (validating strict integers and bounds to eliminate second/millisecond ambiguity).
@@ -57,7 +57,7 @@ All database indexes are verified and created idempotently at application startu
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 ```text
 ├── app/
@@ -71,6 +71,6 @@ All database indexes are verified and created idempotently at application startu
 
 ---
 
-## 📋 Status & Verification
+##  Status & Verification
 - **All requirements implemented**: No pending or unverified contract specifications.
 - **Automated test suite**: All business rules (R1–R5), concurrency guarantees, and analytics aggregation pipelines pass verification.
