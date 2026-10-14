@@ -1,7 +1,11 @@
 # DECISIONS.md
 
-1. **Indexes.** On attendance: unique `(emp_code, date)` (one record per day, makes punch-in race-safe, serves the employee filter and monthly report); `(date desc, emp_code)` for the default listing order and month scans; `(status, date desc, emp_code)` for the status filter; `(emp_code, punch_in desc)` to find a punch-out's record. On employees: unique `emp_code`, `(department, emp_code)`, `joined_on` and `(department, joined_on)` for headcount. I rejected copying `department` into every log: faster reports, but a department change would mean rewriting history.
-2. **Punch-in race.** Both requests load the employee, work out the same date and call `insert_one`. The unique index lets exactly one succeed; the other gets `DuplicateKeyError`, returned as 409. There is no check-then-insert.
-3. **Ties.** `$rank` gives tied employees the same rank and skips the next. I filter `rank <= limit` after ranking, so everyone tied at the cutoff is returned, which can be more than `limit` rows.
-4. **Headcount.** The summary starts from `employees` (joined on or before month end) and looks up each person's logs. `$group` adds 1 per employee even when the lookup is empty, so zero-log people count.
-5. **At 100x.** Keep per-employee daily summary documents, updated on punch and correction, so analytics read small pre-aggregated rows instead of joining raw logs; use keyset pagination instead of `skip`.
+1. **Indexes.** On attendance, unique `(emp_code, date)` guarantees one daily log and safe punch-ins; `(date desc, emp_code)` handles pagination; `(status, date desc, emp_code)` filters by status; and `(emp_code, punch_in desc)` finds open shifts. On employees, I indexed unique `emp_code` and `(department, joined_on)` for headcount. I rejected copying `department` into logs because transfers would invalidate past records.
+
+2. **Punch-in race.** When two requests hit simultaneously, both compute the same date and call `insert_one`. The unique `(emp_code, date)` index lets the first succeed and rejects the second with `DuplicateKeyError`. My handler catches this and returns 409 Conflict, avoiding fragile check-then-insert code.
+
+3. **Ties.** I used `$rank` (1, 2, 2, 4) and filtered `rank <= limit` afterwards. If employees tie at the cutoff, all are returned. It's fairer than arbitrarily dropping someone based on database ordering.
+
+4. **Headcount.** My pipeline starts from `employees` (joined on or before month end) and `$lookup`s logs. Grouping uses `{$sum: 1}` per employee, ensuring zero-log employees are still counted.
+
+5. **At 100x scale.** I would store daily summaries when punches close instead of querying raw logs, and switch from `skip`/`limit` to keyset (cursor) pagination.
